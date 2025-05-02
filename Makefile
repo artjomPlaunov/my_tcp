@@ -10,3 +10,6 @@ clean:
 
 run:
 	sudo env PATH=$$PATH dune exec ./main.exe
+
+run-peer-test:
+	sudo env PATH=$$PATH dune exec ./peer_test.exe

@@ -1,5 +1,8 @@
 type version = IPv4 | IPv6
 
+let version_offset = 0
+
+
 type protocol = 
   | ICMP
   | IGMP
@@ -18,11 +21,11 @@ type t = {
 }
 
 let ipv4_to_string addr =
-  let b0 = Int32.to_int (Int32.shift_right_logical addr 24) in
-  let b1 = Int32.to_int (Int32.shift_right_logical (Int32.logand addr 0x00FF0000l) 16) in
-  let b2 = Int32.to_int (Int32.shift_right_logical (Int32.logand addr 0x0000FF00l) 8) in
-  let b3 = Int32.to_int (Int32.logand addr 0x000000FFl) in
-  Printf.sprintf "%d.%d.%d.%d" b0 b1 b2 b3
+  Printf.sprintf "%d.%d.%d.%d"
+    (Int32.to_int (Int32.shift_right_logical addr 24))
+    (Int32.to_int (Int32.shift_right_logical (Int32.logand addr 0x00FF0000l) 16))
+    (Int32.to_int (Int32.shift_right_logical (Int32.logand addr 0x0000FF00l) 8))
+    (Int32.to_int (Int32.logand addr 0x000000FFl))
 
 let string_to_ipv4 s =
   let parts = String.split_on_char '.' s in
@@ -45,21 +48,13 @@ let parse_version buf =
   | 6 -> IPv6
   | _ -> failwith "Invalid IP version"
 
-let parse_ip_address buf start =
-  Int32.logor
-    (Int32.shift_left (Int32.of_int (Bytes.get buf start |> int_of_char)) 24)
-    (Int32.logor
-      (Int32.shift_left (Int32.of_int (Bytes.get buf (start + 1) |> int_of_char)) 16)
-      (Int32.logor
-        (Int32.shift_left (Int32.of_int (Bytes.get buf (start + 2) |> int_of_char)) 8)
-        (Int32.of_int (Bytes.get buf (start + 3) |> int_of_char))))
 
 let parse_ip_packet buf = 
   let version = parse_version buf in
   let ihl = (Bytes.get buf 0 |> int_of_char) land 0x0f in
   let total_length = Bytes.length buf in 
-  let source_addr = parse_ip_address buf 12 in
-  let dest_addr = parse_ip_address buf 16 in
+  let source_addr = Bytes.get_int32_be buf 12 in
+  let dest_addr = Bytes.get_int32_be buf 16 in
   let payload = Bytes.sub buf (ihl * 4) (total_length - ihl * 4) in
   let protocol = match Bytes.get buf 9 |> int_of_char with
     | 1 -> ICMP

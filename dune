@@ -1,4 +1,4 @@
-(executable
- (name main)
+(executables
+ (names main peer_test)
  (libraries unix tuntap hex)
  (preprocess (pps ppx_deriving.show)))
