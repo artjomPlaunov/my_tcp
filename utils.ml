@@ -20,3 +20,14 @@ let run_command cmd =
   match Unix.system cmd with
   | Unix.WEXITED 0 -> ()
   | _ -> failwith ("Command failed: " ^ cmd)
+
+(* read scapy generated TCP backet from raw binary. *)
+let read_tcp_payload filename =
+  (* Open the file *)
+  let in_channel = open_in_bin filename in
+  let length = in_channel_length in_channel in
+  (* Read the entire file into a bytes array *)
+  let payload = Bytes.create length in
+  really_input in_channel payload 0 length;
+  close_in in_channel;
+  payload

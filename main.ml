@@ -15,12 +15,12 @@ let main () =
     let packet_size = Tun.read tun buf in
     let packet_bytes = Bytes.sub buf 0 packet_size in
     let packet = Ip.deserialize packet_bytes in
-    (* match (packet.version, packet.protocol) with 
-    | (Ip.IPv4, Ip.TCP) ->  *)
+    match (packet.version, packet.protocol) with 
+    
+    | (Ip.IPv4, Ip.TCP) ->  
       Ip.pp_ip_packet (Format.formatter_of_out_channel stdout) packet;
       flush stdout;
-      (* flush stdout
-    | _ -> () *)
+    | _ -> ()
   done
 
 let () = main () 

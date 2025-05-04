@@ -10,6 +10,9 @@ build:
 	sudo ./tun_forward.sh
 	dune build
 
+dune_build: 
+	dune build
+
 clean:
 	sudo ./tun_forward_teardown.sh
 	sudo iptables -t raw -D PREROUTING 1 || true
