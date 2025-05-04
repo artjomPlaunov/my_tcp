@@ -1,15 +1,3 @@
-type version = IPv4 | IPv6
-
-let version_offset = 0
-
-
-type protocol = 
-  | ICMP
-  | IGMP
-  | TCP
-  | UDP
-  | Other of int
-
 type t = {
   version : version;
   ihl : int;
@@ -19,6 +7,17 @@ type t = {
   payload : Bytes.t;
   protocol : protocol;
 }
+and 
+version = IPv4 | IPv6
+and 
+protocol = 
+  | ICMP
+  | IGMP
+  | TCP
+  | UDP
+  | Other of int
+
+let version_offset = 0
 
 let ipv4_to_string addr =
   Printf.sprintf "%d.%d.%d.%d"
@@ -42,15 +41,26 @@ let string_to_ipv4 s =
       addr
   | _ -> failwith "Invalid IPv4 address format"
 
-let parse_version buf = 
+let deserialize_version buf = 
   match (Bytes.get buf 0 |> int_of_char) lsr 4 with
   | 4 -> IPv4
   | 6 -> IPv6
   | _ -> failwith "Invalid IP version"
 
+  let serialize_version v = 
+    match v with 
+    | IPv4 -> Int32.of_int 4 
+    | IPv6 -> Int32.of_int 6
 
-let parse_ip_packet buf = 
-  let version = parse_version buf in
+let serialize_protocol p = 
+  match p with 
+  | TCP -> 6 
+  | ICMP -> 1
+  | _ -> failwith "serialize_protocol todo"
+
+
+let deserialize buf = 
+  let version = deserialize_version buf in
   let ihl = (Bytes.get buf 0 |> int_of_char) land 0x0f in
   let total_length = Bytes.length buf in 
   let source_addr = Bytes.get_int32_be buf 12 in
@@ -73,6 +83,51 @@ let parse_ip_packet buf =
     protocol;
   }
 
+  let serialize ~protocol ~source ~dest ~payload =
+    let protocol = serialize_protocol protocol in  
+    let source = string_to_ipv4 source in     
+    let dest = string_to_ipv4 dest in            
+    let version_ihl = 0x45 in                    
+    let tos = 0 in
+    let total_len = 20 + Bytes.length payload in
+    let id = 78 in
+    let flags_fragment = 0 in
+    let ttl = 64 in
+    let header_checksum = 0 in                     
+    
+    let header = Bytes.create 20 in
+    Bytes.set header 0 (Char.chr version_ihl);
+    Bytes.set header 1 (Char.chr tos);
+    Bytes.set_int16_be header 2 total_len;
+    Bytes.set_int16_be header 4 id;
+    Bytes.set_int16_be header 6 flags_fragment;
+    Bytes.set header 8 (Char.chr ttl);
+    Bytes.set header 9 (Char.chr protocol);
+    Bytes.set_int16_be header 10 header_checksum;
+    Bytes.set_int32_be header 12 source;
+    Bytes.set_int32_be header 16 dest;
+  
+    let checksum =
+      let sum = ref 0 in
+      let i = ref 0 in
+      while !i < 20 do
+        let word =
+          (Char.code (Bytes.get header !i) lsl 8) +
+          Char.code (Bytes.get header (!i + 1))
+        in
+        sum := !sum + word;
+        i := !i + 2
+      done;
+      let sum = (!sum lsr 16) + (!sum land 0xFFFF) in
+      let sum = sum + (sum lsr 16) in
+      lnot sum land 0xFFFF
+    in
+    Bytes.set_int16_be header 10 checksum;
+    let packet = Bytes.create (20 + Bytes.length payload) in
+    Bytes.blit header 0 packet 0 20;
+    Bytes.blit payload 0 packet 20 (Bytes.length payload);
+    packet
+  
 let pp_ip_packet fmt packet =
   let version_str = match packet.version with IPv4 -> "IPv4" | IPv6 -> "IPv6" in
   Format.fprintf fmt "IP Packet:@\n";

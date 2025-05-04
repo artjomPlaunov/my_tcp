@@ -15,11 +15,6 @@ let hexdump buf size =
   );
   Printf.printf "\n%!"
 
-let is_ipv4_ping buf =
-  let version = (Char.code (Bytes.get buf 0) lsr 4) in  (* Version is in high nibble of first byte *)
-  let protocol = Char.code (Bytes.get buf 9) in  (* Protocol is at offset 9 in IP header *)
-  version = 4 && protocol = 0x01  (* IPv4 and not UDP *)
-
 let run_command cmd =
   Printf.printf "Running command: %s\n" cmd;
   match Unix.system cmd with
