@@ -8,7 +8,6 @@ let main () =
   let tun = Tun.create tun_name in
   run_command (Printf.sprintf "sudo ip addr add %s dev %s" tun_addr tun_name);
   run_command (Printf.sprintf "ip link set %s up" tun_name);
-  
   let buf = Bytes.create 1500 in
   while true do
     flush stdout;

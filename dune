@@ -1,4 +1,22 @@
+(library 
+ (name tun)
+ (modules tun)
+ (libraries tuntap unix)
+)
+
+(library
+ (name utils)
+ (modules utils)
+ (libraries unix hex)
+)
+
+(library
+ (name ip)
+ (modules ip)
+)
+
 (executables
  (names main peer_test)
- (libraries unix tuntap hex)
- (preprocess (pps ppx_deriving.show)))
+ (libraries utils tcp ip)
+ (preprocess (pps ppx_deriving.show))
+ (modules main peer_test))
