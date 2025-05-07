@@ -8,8 +8,6 @@ let main () =
   let tun = Tun.create tun_name in
   run_command (Printf.sprintf "sudo ip addr add %s dev %s" tun_addr tun_name);
   run_command (Printf.sprintf "ip link set %s up" tun_name);
-  (* dummy TCP packet *)
-  let _ = () in 
   let payload = read_tcp_payload "tcp.bin" in
   let packet = Ip.serialize ~protocol:Ip.TCP ~source:"10.0.1.7" ~dest:"10.0.0.6" ~payload in 
   let p = Ip.deserialize packet in 
