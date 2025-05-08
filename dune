@@ -16,7 +16,7 @@
 )
 
 (executables
- (names main peer_test)
- (libraries utils tcp ip)
+ (names host peer play)
+ (libraries utils tcp ip eio eio_main)
  (preprocess (pps ppx_deriving.show))
- (modules main peer_test))
+ (modules host peer play))

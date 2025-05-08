@@ -48,8 +48,11 @@ view_network:
 	ip route
 	sudo iptables -t raw -L -v -n --line-numbers
 
-run:
-	sudo env PATH=$$PATH dune exec ./main.exe tun0 10.0.0.1/24
+run-host:
+	sudo env PATH=$$PATH dune exec ./host.exe tun0 10.0.0.1/24 10.0.1.5
 
-run-peer-test:
-	sudo env PATH=$$PATH dune exec ./peer_test.exe tun1 10.0.1.1/24 
+trace-host: 
+	sudo env PATH=$$PATH eio-trace run -- ./_build/default/host.exe tun0 10.0.0.1/24 10.0.1.5
+
+run-peer:
+	sudo env PATH=$$PATH dune exec ./peer.exe tun1 10.0.1.1/24 10.0.0.7
