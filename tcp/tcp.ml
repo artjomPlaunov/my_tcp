@@ -10,6 +10,7 @@ type conn = { ip : string; port : int }
 type msg = Conn of conn 
 
 type tcb = {
+  tun : Tun.t;
   mutable state : state; 
   port: int;
   ip : string;
@@ -17,14 +18,51 @@ type tcb = {
   mutable dest_port : int;
 }
 
+let read_packet_thread tcb = (fun () -> 
+  traceln "EIO Fiber: Read Packet from TUN Device";
+  let buf = Bytes.create 1500 in
+  while true do
+    let packet_size = Tun.read tcb.tun buf in
+    let packet_bytes = Bytes.sub buf 0 packet_size in
+    let packet = Ip.deserialize packet_bytes in
+    match (packet.version, packet.protocol) with 
+    | (Ip.IPv4, Ip.TCP) ->  
+      (match tcb.state with 
+      | LISTEN -> 
+        traceln 
+        "read_packet_thread: reading packets from TUN device in LISTEN state";
+        Ip.pp_ip_packet (Format.formatter_of_out_channel stdout) packet;
+        flush stdout;
+      | _ -> ()
+      )
+    | _ -> ();
+    Fiber.yield ();
+  done;
+  ()
+) 
+
+let read_user_cmd_thread _ msg_stream = (fun () -> 
+  traceln "Read Client Msg.";
+  while true do 
+    let msg = Eio.Stream.take_nonblocking msg_stream in 
+    match msg with 
+    | Some (Conn _) -> traceln "Got Conn!";
+    | None -> Fiber.yield ();
+  done;
+) 
+
 let tcp_server _ _ 
   ~active 
-  addr port
+  addr port 
   tun_name tun_addr 
   msg_stream   
   ?(dest_ip="") ?(dest_port=(-1)) () = 
+  let tun = Tun.create tun_name in
+  run_command (Printf.sprintf "sudo ip addr add %s dev %s" tun_addr tun_name);
+  run_command (Printf.sprintf "ip link set %s up" tun_name);
   let tcb = 
     {
+      tun = tun;
       state = LISTEN; 
       port = port;
       ip = addr; 
@@ -35,49 +73,15 @@ let tcp_server _ _
   if active 
   then (
     traceln "Instantiating TCP Server with Active Open";
-    tcb.state <- SYN_SENT;
-  );
-  let tun = Tun.create tun_name in
-  run_command (Printf.sprintf "sudo ip addr add %s dev %s" tun_addr tun_name);
-  run_command (Printf.sprintf "ip link set %s up" tun_name);
-
-  let read_packet_thread = (fun () -> 
-    traceln "EIO Fiber: Read Packet from TUN Device";
-    let buf = Bytes.create 1500 in
-    while true do
-      let packet_size = Tun.read tun buf in
-      let packet_bytes = Bytes.sub buf 0 packet_size in
-      let packet = Ip.deserialize packet_bytes in
-      match (packet.version, packet.protocol) with 
-      | (Ip.IPv4, Ip.TCP) ->  
-        (match tcb.state with 
-        | LISTEN -> 
-          traceln "read_packet_thread: reading packets from TUN device in LISTEN state";
-          Ip.pp_ip_packet (Format.formatter_of_out_channel stdout) packet;
-          flush stdout;
-        | _ -> ()
-        )
-      | _ -> ();
-      Fiber.yield ();
-    done;
-    ()
-  ) in
-
-  let read_user_cmd_thread = (fun () -> 
-    traceln "Read Client Msg.";
-    while true do 
-      let msg = Eio.Stream.take_nonblocking msg_stream in 
-      match msg with 
-      | Some (Conn _) -> traceln "Got Conn!";
-      | None -> Fiber.yield ();
-    done;
-  ) in
-  
+    tcb.state <- SYN_SENT)
+  else (
+    traceln "Instantiating TCP Server with Passive Listen");
   if tcb.state = SYN_SENT 
   then 
-    (* source, *)
     ();
-  Eio.Fiber.both read_packet_thread read_user_cmd_thread
+  Eio.Fiber.both 
+    (read_packet_thread tcb) 
+    (read_user_cmd_thread tcb msg_stream)
 
 let tcp_open 
       ~active 
