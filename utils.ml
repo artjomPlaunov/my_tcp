@@ -31,3 +31,10 @@ let read_tcp_payload filename =
   really_input in_channel payload 0 length;
   close_in in_channel;
   payload
+
+
+
+  (*let payload = read_tcp_payload "tcp.bin" in
+  let packet = Ip.serialize ~protocol:Ip.TCP ~source:"10.0.1.7" ~dest:"10.0.0.6" ~payload in 
+  let p = Ip.deserialize packet in 
+  *)

@@ -3,9 +3,8 @@ type t = {
   dest: int;
   seq_num: int32;
   ack_num: int32;
-  header_len: int;
   window: int;
-  checksum: int;
+  ctrl: flags;
   payload: Bytes.t;
 }
 and 
@@ -29,13 +28,12 @@ let serialize_flags flags =
 
 let serialize t = 
   let data_len = Bytes.length t.payload in 
-  let hdr_flags = t.header_len in
+  let hdr_flags = 5 in 
   let hdr_flags = hdr_flags lsl 12 in 
-  let buf = Bytes.create (t.header_len + data_len) in 
+  let buf = Bytes.create (20 + data_len) in 
   Bytes.set_int16_be buf 0 t.source;
   Bytes.set_int16_be buf 2 t.dest;
   Bytes.set_int32_be buf 4 t.seq_num;
   Bytes.set_int32_be buf 8 t.ack_num;
   Bytes.set_int16_be buf 12 hdr_flags;
-
   buf

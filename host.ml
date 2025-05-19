@@ -8,7 +8,6 @@ let main () =
       ~active:false 
       "10.0.0.5" 1234
       tun_name tun_addr () in
-
   while true do 
   ()
   done
