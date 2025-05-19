@@ -1,0 +1,3 @@
+Actions I need to automate/fix-up: 
+
+- bring back a caps lock binding on my keyboard (took caps for ctrl). 
