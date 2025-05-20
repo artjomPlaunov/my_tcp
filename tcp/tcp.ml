@@ -24,22 +24,23 @@ type tcb = {
 *)
 let gen_isn () = 69l
 
-let validate_packet tcb (packet : Ip.t) (pkt : Packet.t) pkt_bytes = 
+let validate_packet tcb (packet : Ip.t) (pkt : Packet.t) pkt_bytes =
   traceln "validating packet";
-  let ip = Ip.string_to_ipv4 tcb.ip in 
-  let original_checksum = Bytes.get_int16_be pkt_bytes 16 in 
+  let ip = Ip.string_to_ipv4 tcb.ip in
+  let original_checksum = Bytes.get_int16_be pkt_bytes 16 in
   Bytes.set_int16_be pkt_bytes 16 0;
-  let checksum = Packet.checksum pkt_bytes packet.source_addr packet.dest_addr in 
+  let checksum =
+    Packet.checksum pkt_bytes packet.source_addr packet.dest_addr
+  in
   ip = packet.dest_addr && pkt.dest = tcb.port && original_checksum = checksum
 
-let packet_handler tcb (_ : Ip.t) tcp_pkt = 
+let packet_handler tcb (_ : Ip.t) tcp_pkt =
   match tcb.state with
-        | LISTEN ->
-            traceln "(LISTEN) read_packet";
-            Packet.pp_tcp tcp_pkt;
-            flush stdout
-        | SYN_SENT -> ()
-
+  | LISTEN ->
+      traceln "(LISTEN) read_packet";
+      Packet.pp_tcp tcp_pkt;
+      flush stdout
+  | SYN_SENT -> ()
 
 let read_packet tcb () =
   traceln "EIO read_packet spawned";
@@ -49,10 +50,10 @@ let read_packet tcb () =
     let packet_bytes = Bytes.sub buf 0 packet_size in
     let packet = Ip.deserialize packet_bytes in
     match (packet.version, packet.protocol) with
-    | Ip.IPv4, Ip.TCP -> (
-        let tcp_pkt = Packet.deserialize packet.payload in 
-        if validate_packet tcb packet tcp_pkt packet.payload then 
-        packet_handler tcb packet tcp_pkt)
+    | Ip.IPv4, Ip.TCP ->
+        let tcp_pkt = Packet.deserialize packet.payload in
+        if validate_packet tcb packet tcp_pkt packet.payload then
+          packet_handler tcb packet tcp_pkt
     | _ ->
         ();
         Fiber.yield ()
