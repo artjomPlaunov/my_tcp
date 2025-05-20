@@ -37,20 +37,20 @@ clean_network:
 
 build:
 	sudo $(MAKE) network
-	sudo env PATH==$$PATH dune build
+	dune build
 
 dune-build:
-	sudo env PATH==$$PATH dune build
+	dune build
 
 dune-clean:
-	sudo env PATH==$$PATH dune clean
+	env PATH=$$PATH dune clean
 
 dune-fmt:
-	sudo env PATH==$$PATH dune fmt
+	dune fmt
 
 clean:
 	sudo $(MAKE) clean_network
-	sudo env PATH==$$PATH dune clean
+	dune clean
 
 view_network:
 	ip link
