@@ -39,6 +39,12 @@ build:
 	sudo $(MAKE) network
 	sudo env PATH==$$PATH dune build
 
+dune-build:
+	sudo env PATH==$$PATH dune build
+
+dune-clean:
+	sudo env PATH==$$PATH dune clean
+
 clean:
 	sudo $(MAKE) clean_network
 	sudo env PATH==$$PATH dune clean

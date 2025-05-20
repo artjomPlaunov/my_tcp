@@ -28,7 +28,7 @@ type tcb = {
 let gen_isn () = 69l
 
 let read_packet tcb () = 
-  traceln "EIO Thread read_packet: Reading Packets from TUN device.";
+  traceln "EIO read_packet";
   let buf = Bytes.create 1500 in
   while true do
     let packet_size = Tun.read tcb.tun buf in
@@ -38,9 +38,8 @@ let read_packet tcb () =
     | (Ip.IPv4, Ip.TCP) ->  
       (match tcb.state with 
       | LISTEN -> 
-        traceln 
-        "read_packet: LISTEN state.";
-        Ip.pp_ip_packet (Format.formatter_of_out_channel stdout) packet;
+        traceln "(LISTEN) read_packet";
+        Packet.pp_tcp (Packet.deserialize packet.payload);
         flush stdout;
       | SYN_SENT -> ();
       )
@@ -60,24 +59,22 @@ let read_cmd _ msg_stream () =
   ()
 
 let init_handshake tcb = 
-  let ctrl_bits : Packet.flags = {
-    urg=false;
-    ack=false;
-    psh=false;
-    rst=false;
-    syn=true;
-    fin=false;
-  } in 
   let syn_pkt : Packet.t = {
       source = tcb.port;
       dest = tcb.dest_port;
       seq_num = (gen_isn ());
       ack_num = 0l;
-      window = 5;
-      ctrl = ctrl_bits;
+      window = 10;
+      flags = Packet.get_flags 2;
       payload= Bytes.create 0;
     } in 
   let payload = Packet.serialize syn_pkt in
+  let checksum = Packet.checksum  
+                          payload 
+                          (Ip.string_to_ipv4 tcb.ip) 
+                          (Ip.string_to_ipv4 tcb.dest_ip) 
+  in 
+  Bytes.set_int16_be payload 16 checksum;
   let pkt = Ip.serialize ~protocol:Ip.TCP ~source:tcb.ip ~dest:tcb.dest_ip ~payload in 
   let _ = Tun.write tcb.tun pkt in 
   ()

@@ -1,2 +1,5 @@
+Dumb Questions:
+
+
 
 - can tcp outlive a connection? client program crashes and resumes same connection? 
