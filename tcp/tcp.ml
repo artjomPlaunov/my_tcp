@@ -24,6 +24,14 @@ type tcb = {
 *)
 let gen_isn () = 69l
 
+let validate_packet tcb (packet : Ip.t) (pkt : Packet.t) pkt_bytes = 
+  traceln "validating packet";
+  let ip = Ip.string_to_ipv4 tcb.ip in 
+  let original_checksum = Bytes.get_int16_be pkt_bytes 16 in 
+  Bytes.set_int16_be pkt_bytes 16 0;
+  let checksum = Packet.checksum pkt_bytes packet.source_addr packet.dest_addr in 
+  ip = packet.dest_addr && pkt.dest = tcb.port && original_checksum = checksum
+
 let read_packet tcb () =
   traceln "EIO read_packet";
   let buf = Bytes.create 1500 in
@@ -33,6 +41,8 @@ let read_packet tcb () =
     let packet = Ip.deserialize packet_bytes in
     match (packet.version, packet.protocol) with
     | Ip.IPv4, Ip.TCP -> (
+        let tcp_pkt = Packet.deserialize packet.payload in 
+        if validate_packet tcb packet tcp_pkt packet.payload then 
         match tcb.state with
         | LISTEN ->
             traceln "(LISTEN) read_packet";
