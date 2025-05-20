@@ -17,7 +17,7 @@ let hexdump buf size =
   Printf.printf "\n%!"
 
 let run_command cmd =
-  Printf.printf "Running command: %s\n" cmd;
+  (* Printf.printf "Running command: %s\n" cmd; *)
   match Unix.system cmd with
   | Unix.WEXITED 0 -> ()
   | _ -> failwith ("Command failed: " ^ cmd)

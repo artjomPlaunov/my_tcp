@@ -32,8 +32,17 @@ let validate_packet tcb (packet : Ip.t) (pkt : Packet.t) pkt_bytes =
   let checksum = Packet.checksum pkt_bytes packet.source_addr packet.dest_addr in 
   ip = packet.dest_addr && pkt.dest = tcb.port && original_checksum = checksum
 
+let packet_handler tcb (_ : Ip.t) tcp_pkt = 
+  match tcb.state with
+        | LISTEN ->
+            traceln "(LISTEN) read_packet";
+            Packet.pp_tcp tcp_pkt;
+            flush stdout
+        | SYN_SENT -> ()
+
+
 let read_packet tcb () =
-  traceln "EIO read_packet";
+  traceln "EIO read_packet spawned";
   let buf = Bytes.create 1500 in
   while true do
     let packet_size = Tun.read tcb.tun buf in
@@ -43,12 +52,7 @@ let read_packet tcb () =
     | Ip.IPv4, Ip.TCP -> (
         let tcp_pkt = Packet.deserialize packet.payload in 
         if validate_packet tcb packet tcp_pkt packet.payload then 
-        match tcb.state with
-        | LISTEN ->
-            traceln "(LISTEN) read_packet";
-            Packet.pp_tcp (Packet.deserialize packet.payload);
-            flush stdout
-        | SYN_SENT -> ())
+        packet_handler tcb packet tcp_pkt)
     | _ ->
         ();
         Fiber.yield ()
@@ -56,7 +60,7 @@ let read_packet tcb () =
   ()
 
 let read_cmd _ msg_stream () =
-  traceln "Read Client Msg.";
+  traceln "EIO read_cmd spawned";
   while true do
     let msg = Eio.Stream.take_nonblocking msg_stream in
     match msg with
@@ -96,10 +100,10 @@ let tcp_server _ _ ~active addr port tun_name tun_addr msg_stream
   run_command (Printf.sprintf "ip link set %s up" tun_name);
   let tcb = { tun; state = LISTEN; port; ip = addr; dest_ip; dest_port } in
   if active then (
-    traceln "Instantiating TCP Server with Active Open";
+    traceln "TCP Server (Active)";
     init_handshake tcb;
     tcb.state <- SYN_SENT)
-  else traceln "Instantiating TCP Server with Passive Listen";
+  else traceln "TCP Server (Passive)";
 
   Eio.Fiber.both (read_packet tcb) (read_cmd tcb msg_stream)
 
