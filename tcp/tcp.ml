@@ -37,6 +37,18 @@ let validate_packet tcb (packet : Ip.t) (pkt : Packet.t) pkt_bytes =
   tcb.ip = packet.dest_addr && pkt.dest = tcb.port
   && original_checksum = checksum
 
+let write_packet tcb pkt =
+  let payload = Packet.serialize pkt in
+  let checksum = Packet.checksum payload tcb.ip tcb.dest_ip in
+  Bytes.set_int16_be payload 16 checksum;
+  let pkt =
+    Ip.serialize ~protocol:Ip.TCP ~source:(Ip.ipv4_to_string tcb.ip)
+      ~dest:(Ip.ipv4_to_string tcb.dest_ip)
+      ~payload
+  in
+  let _ = Tun.write tcb.tun pkt in
+  ()
+
 let packet_handler tcb (packet : Ip.t) tcp_pkt =
   match tcb.state with
   | LISTEN ->
@@ -56,15 +68,7 @@ let packet_handler tcb (packet : Ip.t) tcp_pkt =
           payload = Bytes.create 0;
         }
       in
-      let payload = Packet.serialize syn_ack_pkt in
-      let checksum = Packet.checksum payload tcb.ip tcb.dest_ip in
-      Bytes.set_int16_be payload 16 checksum;
-      let pkt =
-        Ip.serialize ~protocol:Ip.TCP ~source:(Ip.ipv4_to_string tcb.ip)
-          ~dest:(Ip.ipv4_to_string tcb.dest_ip)
-          ~payload
-      in
-      let _ = Tun.write tcb.tun pkt in
+      write_packet tcb syn_ack_pkt;
       tcb.state <- SYN_RCVD;
       traceln "(LISTEN) -> (SYN-RCVD) transition";
       ()
@@ -78,10 +82,26 @@ let packet_handler tcb (packet : Ip.t) tcp_pkt =
         tcb.dest_port = tcp_pkt.source
         && tcb.dest_ip = tcb.dest_ip && tcp_pkt.flags.syn && tcp_pkt.flags.ack
         && tcp_pkt.ack_num = Int32.add 1l tcb.iss
-      then 
-        traceln "(SYN_SENT) -> (ESTABLISHED) transition";
-        ()
-  | SYN_RCVD -> ()
+      then traceln "(SYN_SENT) -> (ESTABLISHED) transition";
+      let ack_pkt : Packet.t =
+        {
+          source = tcb.port;
+          dest = tcb.dest_port;
+          seq_num = Int32.add 1l tcb.iss;
+          ack_num = Int32.add 1l tcp_pkt.seq_num;
+          window = 10;
+          flags = Packet.get_flags 16;
+          payload = Bytes.create 0;
+        }
+      in
+      write_packet tcb ack_pkt;
+      ()
+  | SYN_RCVD ->
+      traceln "(SYN_RCVD) read_packet";
+      Packet.pp_tcp tcp_pkt;
+      flush stdout;
+      traceln "(SYN_RCVD) -> (ESTABLISHED) transition";
+      ()
 
 let read_packet tcb () =
   traceln "EIO read_packet spawned";
@@ -123,15 +143,7 @@ let init_handshake tcb =
       payload = Bytes.create 0;
     }
   in
-  let payload = Packet.serialize syn_pkt in
-  let checksum = Packet.checksum payload tcb.ip tcb.dest_ip in
-  Bytes.set_int16_be payload 16 checksum;
-  let pkt =
-    Ip.serialize ~protocol:Ip.TCP ~source:(Ip.ipv4_to_string tcb.ip)
-      ~dest:(Ip.ipv4_to_string tcb.dest_ip)
-      ~payload
-  in
-  let _ = Tun.write tcb.tun pkt in
+  write_packet tcb syn_pkt;
   ()
 
 let tcp_server _ _ ~active addr port tun_name tun_addr msg_stream
