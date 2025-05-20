@@ -4,8 +4,9 @@ let main () =
   let tun_name = Sys.argv.(1) in
   let tun_addr = Sys.argv.(2) in
   let _ =
-    Tcp.tcp_open ~active:true "10.0.1.7" 6789 tun_name tun_addr
-      ~dest_ip:"10.0.0.5" ~dest_port:1234 ()
+    Tcp.tcp_open ~active:true
+      (Ip.string_to_ipv4 "10.0.1.7")
+      6789 tun_name tun_addr ~dest_ip:"10.0.0.5" ~dest_port:1234 ()
   in
   while true do
     ()

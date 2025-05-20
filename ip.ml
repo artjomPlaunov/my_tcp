@@ -22,20 +22,22 @@ let ipv4_to_string addr =
     (Int32.to_int (Int32.logand addr 0x000000FFl))
 
 let string_to_ipv4 s =
-  let parts = String.split_on_char '.' s in
-  match List.map int_of_string parts with
-  | [ b0; b1; b2; b3 ] ->
-      let addr =
-        Int32.logor
-          (Int32.shift_left (Int32.of_int b0) 24)
-          (Int32.logor
-             (Int32.shift_left (Int32.of_int b1) 16)
-             (Int32.logor
-                (Int32.shift_left (Int32.of_int b2) 8)
-                (Int32.of_int b3)))
-      in
-      addr
-  | _ -> failwith "Invalid IPv4 address format"
+  if s = "" then 0l
+  else
+    let parts = String.split_on_char '.' s in
+    match List.map int_of_string parts with
+    | [ b0; b1; b2; b3 ] ->
+        let addr =
+          Int32.logor
+            (Int32.shift_left (Int32.of_int b0) 24)
+            (Int32.logor
+               (Int32.shift_left (Int32.of_int b1) 16)
+               (Int32.logor
+                  (Int32.shift_left (Int32.of_int b2) 8)
+                  (Int32.of_int b3)))
+        in
+        addr
+    | _ -> failwith "Invalid IPv4 address format"
 
 let deserialize_version buf =
   match (Bytes.get buf 0 |> int_of_char) lsr 4 with

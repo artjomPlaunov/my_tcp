@@ -26,22 +26,13 @@ let get_flags x =
   let fin = if x land 1 <> 0 then true else false in
   { urg; ack; psh; rst; syn; fin }
 
-let serialize_flags flags =
-  0 |> fun r ->
-  if flags.urg then r lor 32
-  else
-    r |> fun r ->
-    if flags.ack then r lor 16
-    else
-      r |> fun r ->
-      if flags.psh then r lor 8
-      else
-        r |> fun r ->
-        if flags.rst then r lor 4
-        else
-          r |> fun r ->
-          if flags.syn then r lor 2
-          else r |> fun r -> if flags.fin then r lor 1 else r
+let serialize_flags { urg; ack; psh; rst; syn; fin } =
+  (if urg then 32 else 0)
+  lor (if ack then 16 else 0)
+  lor (if psh then 8 else 0)
+  lor (if rst then 4 else 0)
+  lor (if syn then 2 else 0)
+  lor if fin then 1 else 0
 
 let serialize t =
   let data_len = Bytes.length t.payload in
