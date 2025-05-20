@@ -1,5 +1,4 @@
 (library
  (name tcp)
  (modules tcp packet)
- (libraries tun unix utils eio eio_main ip threads )
-)
+ (libraries tun unix utils eio eio_main ip threads))

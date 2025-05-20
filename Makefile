@@ -45,6 +45,9 @@ dune-build:
 dune-clean:
 	sudo env PATH==$$PATH dune clean
 
+dune-fmt:
+	sudo env PATH==$$PATH dune fmt
+
 clean:
 	sudo $(MAKE) clean_network
 	sudo env PATH==$$PATH dune clean

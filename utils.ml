@@ -1,8 +1,10 @@
 let hexdump buf size =
-  let ihl = (Char.code (Bytes.get buf 0) land 0x0f) * 4 in  (* IHL is in 32-bit words, multiply by 4 for bytes *)
+  let ihl = Char.code (Bytes.get buf 0) land 0x0f * 4 in
+  (* IHL is in 32-bit words, multiply by 4 for bytes *)
   Printf.printf "\nRaw IP packet bytes:\n";
   Printf.printf "Header (IHL: %d bytes):\n" ihl;
-  for i = 0 to min (ihl - 1) (size - 1) do  (* Show header based on IHL *)
+  for i = 0 to min (ihl - 1) (size - 1) do
+    (* Show header based on IHL *)
     Printf.printf "%02x " (Char.code (Bytes.get buf i));
     if (i + 1) mod 4 = 0 then Printf.printf "\n"
   done;
@@ -11,8 +13,7 @@ let hexdump buf size =
     for i = ihl to size - 1 do
       Printf.printf "%02x " (Char.code (Bytes.get buf i));
       if (i + 1) mod 4 = 0 then Printf.printf "\n"
-    done
-  );
+    done);
   Printf.printf "\n%!"
 
 let run_command cmd =
@@ -32,9 +33,7 @@ let read_tcp_payload filename =
   close_in in_channel;
   payload
 
-
-
-  (*let payload = read_tcp_payload "tcp.bin" in
+(*let payload = read_tcp_payload "tcp.bin" in
   let packet = Ip.serialize ~protocol:Ip.TCP ~source:"10.0.1.7" ~dest:"10.0.0.6" ~payload in 
   let p = Ip.deserialize packet in 
   *)
